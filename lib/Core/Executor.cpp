@@ -512,21 +512,18 @@ Executor::setModule(std::vector<std::unique_ptr<llvm::Module>> &modules,
                       error)) {
     klee_error("Could not load KLEE intrinsic file %s", LibPath.c_str());
   }
-  std::cerr <<"01\n";
   // 1.) Link the modules together
   while (kmodule->link(modules, opts.EntryPoint)) {
     // 2.) Apply different instrumentation
     kmodule->instrument(opts);
   }
   // 3.) Optimise and prepare for KLEE
-  std::cerr <<"02\n";
   // Create a list of functions that should be preserved if used
   std::vector<const char *> preservedFunctions;
   specialFunctionHandler = new SpecialFunctionHandler(*this);
   specialFunctionHandler->prepare(preservedFunctions);
 
   preservedFunctions.push_back(opts.EntryPoint.c_str());
-  std::cerr <<"03\n";
   // Preserve the free-standing library calls
   preservedFunctions.push_back("memset");
   preservedFunctions.push_back("memcpy");
@@ -535,7 +532,6 @@ Executor::setModule(std::vector<std::unique_ptr<llvm::Module>> &modules,
 
   kmodule->optimiseAndPrepare(opts, preservedFunctions);
   kmodule->checkModule();
-    std::cerr <<"04\n";
   // 4.) Manifest the module
   kmodule->manifest(interpreterHandler, StatsTracker::useStatistics());
 
@@ -1623,7 +1619,6 @@ Function* Executor::getTargetFunction(Value *calledVal, ExecutionState &state) {
 
 void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
   Instruction *i = ki->inst;
-  errs()<<*i<<"\n";
   if (i->getParent()->getTerminator() == i) {
         int result;
         result = state.encode.checkList(i->getParent());
@@ -1646,7 +1641,6 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
 
     int result;
     result = state.encode.flag;
-    errs()<<"result = "<<result<<"\n";
     if (result == -1) {
         terminateState(state);
         // black list
@@ -2080,7 +2074,6 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
                     }
                 }
             }
-    std::cerr<<"2\n";
     if (f) {
       const FunctionType *fType = 
         dyn_cast<FunctionType>(cast<PointerType>(f->getType())->getElementType());
@@ -2121,9 +2114,7 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
           i++;
         }
       }
-	std::cerr<<"3\n";
       executeCall(state, ki, f, arguments);
-      std::cerr<<"4\n";
     } else {
 #ifdef KLEE_ORIGIN
       ref<Expr> v = eval(ki, 0, state).value;
@@ -3120,7 +3111,6 @@ void Executor::run(ExecutionState &initialState) {
     ExecutionState &state = searcher->selectState();
     KInstruction *ki = state.pc;
     stepInstruction(state);
-    std::cerr<<"executeInstruction.\n";
     executeInstruction(state, ki);
     timers.invoke();
     if (::dumpStates) dumpStates();
@@ -3854,7 +3844,7 @@ if (!os->initialize) {
                 std::cerr << "offset : ";
                 offset->dump();
 #endif
-                const ObjectState *nos = state.addressSpace.findObject(mo);
+//                const ObjectState *nos = state.addressSpace.findObject(mo);
 
         ref<Expr> result = os->read(offset, type);
         
@@ -4496,7 +4486,6 @@ void Executor::set_fjson_map() {
             for (auto i : name) {
                 std::cerr << i << "\n";
             }
-
 #endif
 
             if (name.size() > 2) {

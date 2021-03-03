@@ -1383,15 +1383,12 @@ std::cerr<<"replayPath.\n";
 
   // Get the desired main function.  klee_main initializes uClibc
   // locale and other data and then calls main.
-std::cerr<<"0.5\n";
+
   auto finalModule = interpreter->setModule(loadedModules, Opts);
-  std::cerr<<"0.6\n";
   Function *mainFn = finalModule->getFunction(EntryPoint);
-  std::cerr<<"0.7\n";
   if (!mainFn) {
     klee_error("Entry function '%s' not found in module.", EntryPoint.c_str());
   }
-std::cerr<<"0.8\n";
   externalsAndGlobalsCheck(finalModule);
 
   if (ReplayPathFile != "") {

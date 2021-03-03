@@ -53,7 +53,6 @@ public:
     std::string warning;
     std::vector<std::string> warningWord;
 
-
 public:
 	void addList();
     int addBrConstraint(ref<Expr> cond, bool isTrue, llvm::StringRef labelTrue,
