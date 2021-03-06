@@ -6,7 +6,7 @@ import subprocess
 import time
 import multiprocessing
 import signal
-
+import json
 # usage
 # python main_remote.py file.json
 
@@ -18,27 +18,27 @@ import signal
 
 # those variables need you change
 
-total_cpu = multiprocessing.cpu_count() - 15
-klee_path = "/dir/to/2018_klee_confirm_path/build/bin/klee"
+total_cpu = multiprocessing.cpu_count() - 30
+klee_path = "/data2/yizhuo/inc-experiment/yzklee/build/bin/klee"
 klee_log_file_name = "confirm_result.log"
 klee_result_file_name = "confirm_result.json"
 
 log_file_name = "log.json"
 
 schedule_time = 1  # second
-time_out = 120  # second
+time_out = 60*60*24  # second
 time_out_file_name = "time_out.json"
 
 # notice: for the reason that python can not kill the klee quickly, it is better to set this small.
-memory_out = 2 * 1024 * 1024 * 1024  # byte
+memory_out = 5 * 1024 * 1024 * 1024  # byte
 memory_out_file_name = "memory_out.json"
 
 right_return_code = 0
 klee_error_result_file_name = "error.json"
 klee_right_result_file_name = "tested.json"
 # if you need change the path in link file
-linux_kernel_path_in_json = "/home"
-linux_kernel_path_in_this_pc = "/home"
+linux_kernel_path_in_json = "/home/ubuntu/experiment/lll-56/"
+linux_kernel_path_in_this_pc = "/data2/yizhuo/inc-experiment/experiment/bc-v5.6/"
 
 klee_right_result = "KLEE: done: generated tests ="
 
@@ -49,7 +49,7 @@ class ProcessTimer:
         self.execution_state = False
         self.islink = False
 
-    def init(self, path, link_file, json):
+    def init(self, path, link_file, jsonstr):
         self.initd = True
         self.path = path
         # link the given bitcode files
@@ -57,17 +57,24 @@ class ProcessTimer:
         self.link_file = self.link_file.replace(linux_kernel_path_in_json, linux_kernel_path_in_this_pc)
         bc_list = self.link_file.replace(":\n", "")
         bc_list = bc_list.split(":")
-        link_cmd = "/data/home/yizhuo/llvm-7.0.0/build-dbg/bin/llvm-link -o " + "./built-in.bc"
+        link_cmd = "/data/home/yizhuo/llvm-9.0.0-release/build/bin/llvm-link -o " + "./built-in.bc"
 	#print link_cmd
         for bc in bc_list:
             link_cmd = link_cmd + " " + bc
         self.link_cmd = link_cmd
 	
-        self.json = json
+        self.json = jsonstr
+	jline=json.loads(jsonstr)
+	id_key=jline["id"]	
         self.json = self.json.replace("\n", "")
         # klee_cmd = klee_path + " -json=\'" + self.json + "\' " + "./built-in.bc 2>&1 | tee >> " + klee_log_file_name
-        klee_cmd = klee_path + " -json=\'" + self.json + "\' " + " -fjson=../cg.json " + "./built-in.bc"
-        self.klee_cmd = klee_cmd
+	id_key = id_key.replace("/", "-")
+	print "id_key"
+	print id_key
+        klee_cmd = klee_path + " -json=\'" + self.json + "\' " + " -fjson=/data2/yizhuo/inc-experiment/se-experiment/hybridCG.json " + "./built-in.bc"
+        print "klee_cmd:"
+	print klee_cmd
+	self.klee_cmd = klee_cmd
         self.execution_state = False
 
     def link(self):
@@ -224,7 +231,7 @@ def output_log(s):
     f.write(s)
     f.close()
 
-def run_next_json(index, link_file, json):
+def run_next_json(index, link_file, jsonstr):
     while tasks[index].check_execution_state() or tasks[index].islink:
         tasks[index].poll()
         index = index + 1
@@ -234,7 +241,7 @@ def run_next_json(index, link_file, json):
 
     tasks[index].close()
     path = str(index)
-    tasks[index].init(path, link_file, json)
+    tasks[index].init(path, link_file, jsonstr)
     tasks[index].link()
     return index
 
@@ -285,8 +292,8 @@ def main():
     while line:
         json_index = json_index + 1
         link_file = line
-        json = file.readline()
-        index = run_next_json(index, link_file, json)
+        json_str = file.readline()
+        index = run_next_json(index, link_file, json_str)
         line = file.readline()
 
     wait_all_json()
