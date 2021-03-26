@@ -500,10 +500,8 @@ Executor::setModule(std::vector<std::unique_ptr<llvm::Module>> &modules,
                     const ModuleOptions &opts) {
   assert(!kmodule && !modules.empty() &&
          "can only register one module"); // XXX gross
-  std::cerr << "Inside setModule: \n";
   kmodule = std::unique_ptr<KModule>(new KModule());
   // Preparing the final module happens in multiple stages
-
   // Link with KLEE intrinsics library before running any optimizations
   SmallString<128> LibPath(opts.LibraryDir);
   llvm::sys::path::append(LibPath, "libkleeRuntimeIntrinsic.bca");
@@ -517,12 +515,12 @@ Executor::setModule(std::vector<std::unique_ptr<llvm::Module>> &modules,
     // 2.) Apply different instrumentation
     kmodule->instrument(opts);
   }
+
   // 3.) Optimise and prepare for KLEE
   // Create a list of functions that should be preserved if used
   std::vector<const char *> preservedFunctions;
   specialFunctionHandler = new SpecialFunctionHandler(*this);
   specialFunctionHandler->prepare(preservedFunctions);
-
   preservedFunctions.push_back(opts.EntryPoint.c_str());
   // Preserve the free-standing library calls
   preservedFunctions.push_back("memset");
@@ -548,7 +546,6 @@ Executor::setModule(std::vector<std::unique_ptr<llvm::Module>> &modules,
   DataLayout *TD = kmodule->targetData.get();
   Context::initialize(TD->isLittleEndian(),
                       (Expr::Width)TD->getPointerSizeInBits());
-
   return kmodule->module.get();
 }
 
@@ -1619,6 +1616,12 @@ Function* Executor::getTargetFunction(Value *calledVal, ExecutionState &state) {
 
 void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
   Instruction *i = ki->inst;
+
+  #if !DEBUGINFO
+    i->print(llvm::errs());
+    llvm::errs() << "\n";
+  #endif
+
   if (i->getParent()->getTerminator() == i) {
         int result;
         result = state.encode.checkList(i->getParent());
@@ -2880,7 +2883,7 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
   // Other instructions...
   // Unhandled
   default:
-    terminateStateOnExecError(state, "illegal instruction");
+      terminateStateEarly(state, "illegal instruction");
     break;
   }
 }

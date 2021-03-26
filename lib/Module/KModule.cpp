@@ -52,6 +52,7 @@
 
 #include <sstream>
 #include <cerrno>
+#include <iostream>
 
 using namespace llvm;
 using namespace klee;
@@ -224,7 +225,7 @@ bool KModule::link(std::vector<std::unique_ptr<llvm::Module>> &modules,
     klee_error("Could not link KLEE files %s", error.c_str());
   targetData = std::unique_ptr<llvm::DataLayout>(new DataLayout(module.get()));
   // Check if we linked anything
-  return modules.size() != numRemainingModules;
+    return modules.size() != numRemainingModules;
 }
 
 void KModule::instrument(const Interpreter::ModuleOptions &opts) {
@@ -233,7 +234,7 @@ void KModule::instrument(const Interpreter::ModuleOptions &opts) {
   // optimize is seeing what is as close as possible to the final
   // module.
   legacy::PassManager pm;
-  pm.add(new RaiseAsmPass());
+    pm.add(new RaiseAsmPass());
 
   // This pass will scalarize as much code as possible so that the Executor
   // does not need to handle operands of vector type for most instructions
@@ -247,8 +248,8 @@ void KModule::instrument(const Interpreter::ModuleOptions &opts) {
   pm.add(createLowerAtomicPass());
   if (opts.CheckDivZero) pm.add(new DivCheckPass());
   if (opts.CheckOvershift) pm.add(new OvershiftCheckPass());
-
   pm.add(new IntrinsicCleanerPass(*targetData));
+    std::cerr << "pm.run(*module); \n";
   pm.run(*module);
 }
 

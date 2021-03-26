@@ -59,6 +59,21 @@ bool IntrinsicCleanerPass::runOnBasicBlock(BasicBlock &b, Module &M) {
         continue;
 
       switch (ii->getIntrinsicID()) {
+          case Intrinsic::write_register: {
+              llvm::IRBuilder<> Builder(ii);
+              ii->eraseFromParent();
+              break;
+          }
+          case Intrinsic::read_register: {
+//              llvm::IRBuilder<> Builder(ii);
+//              Value *resultStruct = Builder.CreateAlloca(ii->getType(), ii->getReturnedArgOperand());
+//              ii->replaceAllUsesWith(resultStruct);
+//              ii->eraseFromParent();
+              llvm::outs() << "read_register : \n";
+              b.print(llvm::outs());
+              llvm::outs() << "\n";
+              break;
+          }
       case Intrinsic::vastart:
       case Intrinsic::vaend:
       case Intrinsic::fabs:
