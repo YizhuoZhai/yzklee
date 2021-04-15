@@ -1637,8 +1637,16 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
 	errs()<<"encode.ckeck:"<<"\n";
         this->symbolic.isWarning(state, ki);
         if (state.encode.warningL) {
-            //Check if there is a solution fulfills the constraints
-            state.encode.checkConditions();
+#if !CHECK_ALLOC
+            int ret = this->symbolic.checkInst(state, ki);
+            if (ret == 0) {
+#else
+            {
+#endif
+
+                //Check if there is a solution fulfills the constraints
+                state.encode.checkConditions();
+            }
         }
     }
 
@@ -1650,11 +1658,11 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
         return;
     } else if (result == 0) {
         state.encode.output();
-	errs()<<"Yes.\n";
+	    errs()<<"Yes.\n";
         exit(0);
         // find
     } else if (result == -2) {
-	errs()<<"Yes.\n";
+	    errs()<<"Yes.\n";
         state.encode.output();
         // alt
     }

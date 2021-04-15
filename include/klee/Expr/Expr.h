@@ -25,6 +25,7 @@
 #include <vector>
 #include <map>
 #define DEBUGINFO 0
+#define CHECK_ALLOC 0
 
 namespace llvm {
   class Type;
