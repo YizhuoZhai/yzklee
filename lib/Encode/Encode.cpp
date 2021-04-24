@@ -333,7 +333,7 @@ namespace klee {
     }
 
     void Encode::checkUseList(llvm::StringRef label) {
-       // if (whiteList.size() == flag) {
+        if ((int)whiteList.size() == flag) {
             this->ckeck = false;
             for (const auto &i : useList) {
 #if DEBUGINFO
@@ -343,7 +343,7 @@ namespace klee {
                     this->ckeck = true;
                 }
             }
-        //}
+        }
     }
 
     void Encode::checkBBCount(llvm::StringRef label) {
