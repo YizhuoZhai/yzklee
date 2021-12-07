@@ -1743,7 +1743,10 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
       assert(bi->getCondition() == bi->getOperand(0) &&
              "Wrong operand index!");
       ref<Expr> cond = eval(ki, 0, state).value;
-
+#if !DEBUGINFO
+        std::cerr << "cond :";
+        cond->dump();
+#endif
       cond = optimizer.optimizeExpr(cond, false);
       Executor::StatePair branches = fork(state, cond, false);
 
@@ -1759,10 +1762,12 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
       i->print(rso);
 
       if (branches.first) {
+          std::cerr << "true : \n";
         transferToBasicBlock(bi->getSuccessor(0), bi->getParent(), *branches.first);
 	branches.first->encode.addpath("true : " + rso.str());	
       }
       if (branches.second) {
+          std::cerr << "false : \n";
         transferToBasicBlock(bi->getSuccessor(1), bi->getParent(), *branches.second);
 	branches.second->encode.addpath("false : " + rso.str());
       }
@@ -1772,6 +1777,7 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
                         result = branches.first->encode.addBrConstraint(cond, true, bi->getSuccessor(0)->getName(),
                                                                         bi->getSuccessor(1)->getName());
                         if (result == -2) {
+                            std::cerr << "terminateState true : \n";
                             terminateState(*branches.first);
                         }
                     }
@@ -1779,6 +1785,7 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
                         result = branches.second->encode.addBrConstraint(cond, false, bi->getSuccessor(1)->getName(),
                                                                          bi->getSuccessor(0)->getName());
                         if (result == -2) {
+                            std::cerr << "terminateState false : \n";
                             terminateState(*branches.second);
                         }
                     }
@@ -2400,14 +2407,15 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
       size = MulExpr::create(size, count);
     }
     executeAlloc(state, size, true, ki);
-    this->createAlloca(state, ki);
+//    ref<Expr> alloc_value = this->createAlloca(state, ki);
+    this->symbolic.Alloca(state, ki, elementSize);
     break;
   }
 
   case Instruction::Load: {
     ref<Expr> base = eval(ki, 0, state).value;
     executeMemoryOperation(state, false, base, 0, ki);
-#if DEBUGINFO
+#if !DEBUGINFO
             std::cerr << "load base :";
             base->dump();
             std::cerr << "load value :";
@@ -2419,7 +2427,7 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
   case Instruction::Store: {
     ref<Expr> base = eval(ki, 1, state).value;
     ref<Expr> value = eval(ki, 0, state).value;
-#if DEBUGINFO
+#if !DEBUGINFO
             std::cerr << "store base :";
             base->dump();
             std::cerr << "store value :";
@@ -4564,6 +4572,7 @@ ref<Expr> Executor::createSymbolicArg(ExecutionState &state, Type *ty,
     executeMakeSymbolic(state, mo, name);
     const ObjectState *os = state.addressSpace.findObject(mo);
     expr = os->read(0, kmodule->targetData->getTypeSizeInBits(ty));
+
     state.encode.globalname.push_back(name);
     state.encode.globalexpr.push_back(expr);
 //

@@ -279,6 +279,9 @@ namespace klee {
 
     void Symbolic::callReturnValue(ExecutionState &state, KInstruction *ki,
                                    Function *function) {
+#if !DEBUGINFO
+        std::cerr << "callReturnValue : \n";
+#endif
         Type *resultType = ki->inst->getType();
         if (!resultType->isVoidTy()) {
             Expr::Width size = executor->getWidthForLLVMType(ki->inst->getType());
@@ -320,60 +323,50 @@ namespace klee {
 
     void Symbolic::Alloca(ExecutionState &state, KInstruction *ki, unsigned size) {
 
-//        AllocaInst *ai = cast<AllocaInst>(ki->inst);
-//        if (ai->getAllocatedType()->getTypeID() == Type::IntegerTyID) {
-//            ref<Expr> symbolic = manualMakeSymbolic(allocaName, size * 8);
-//
-//            ObjectPair op;
-//            ref<Expr> address = this->executor->getDestCell(state, ki).value;
-//            ConstantExpr *realAddress = dyn_cast<ConstantExpr>(address);
-//            if (realAddress) {
-//                bool success = executor->getMemoryObject(op, state,
-//                                                         &(state.addressSpace), address);
-//                if (success) {
-//                    const MemoryObject *mo = op.first;
-//                    ref<Expr> offset = mo->getOffsetExpr(address);
-//                    const ObjectState *os = op.second;
-//                    if (os->readOnly) {
-//                    } else {
-//                        ObjectState *wos = state.addressSpace.getWriteable(mo, os);
-//                        wos->write(offset, symbolic);
-//                    }
-//                }
-//            }
-//
-//        } else if (ai->getAllocatedType()->getTypeID() == Type::PointerTyID) {
-//            ref<Expr> symbolic = manualMakeSymbolic(allocaName, BIT_WIDTH);
-//
-//            ObjectPair op;
-//            ref<Expr> address = this->executor->getDestCell(state, ki).value;
-//            ConstantExpr *realAddress = dyn_cast<ConstantExpr>(address);
-//            if (realAddress) {
-//                bool success = executor->getMemoryObject(op, state,
-//                                                         &(state.addressSpace), address);
-//                if (success) {
-//                    const MemoryObject *mo = op.first;
-//                    ref<Expr> offset = mo->getOffsetExpr(address);
-//                    const ObjectState *os = op.second;
-//                    if (os->readOnly) {
-//                    } else {
-//                        ObjectState *wos = state.addressSpace.getWriteable(mo, os);
-//                        wos->write(offset, symbolic);
-//                    }
-//                }
-//            }
-//        } else {
-//#if DEBUGINFO
-//            std::cerr << "Alloca state.encode.ckeck = false;" << "\n";
-//#endif
+        AllocaInst *ai = cast<AllocaInst>(ki->inst);
+        uint64_t bit_size;
+        if (ai->getAllocatedType()->getTypeID() == Type::IntegerTyID) {
+            bit_size = size * 8;
+        } else if (ai->getAllocatedType()->getTypeID() == Type::PointerTyID) {
+            bit_size = BIT_WIDTH;
+        } else {
+#if DEBUGINFO
+            std::cerr << "Alloca state.encode.ckeck = false;" << "\n";
+#endif
 //            state.encode.ckeck = false;
-//        }
+            return;
+        }
+        std::stringstream ss;
+        ss << this->allocaName << this->allocaCount;
+        std::string name = ss.str();
+        this->allocaCount++;
+
+        ref<Expr> symbolic = manualMakeSymbolic(name, bit_size);
+        ObjectPair op;
+        ref<Expr> address = this->executor->getDestCell(state, ki).value;
+        ConstantExpr *realAddress = dyn_cast<ConstantExpr>(address);
+        if (realAddress) {
+            bool success = executor->getMemoryObject(op, state,
+                                                     &(state.addressSpace), address);
+            if (success) {
+                const MemoryObject *mo = op.first;
+                ref<Expr> offset = mo->getOffsetExpr(address);
+                const ObjectState *os = op.second;
+                if (os->readOnly) {
+                } else {
+                    ObjectState *wos = state.addressSpace.getWriteable(mo, os);
+                    wos->write(offset, symbolic);
+                }
+            }
+        }
+        state.encode.globalname.push_back(name);
+        state.encode.globalexpr.push_back(symbolic);
     }
 
     int Symbolic::checkInst(ExecutionState &state, KInstruction *ki) {
 
 //        return 0;
-#if DEBUGINFO
+#if !DEBUGINFO
         std::cerr << "checkInst : " << "\n";
 #endif
         if (!state.encode.ckeck) {
@@ -464,7 +457,7 @@ namespace klee {
                         break;
                     }
                     ref<Expr> v = this->executor->eval(ki, idx, state).value;
-#if DEBUGINFO
+#if !DEBUGINFO
                     std::cerr << "operand : " << idx << "\n";
                     v->dump();
 #endif
@@ -478,6 +471,10 @@ namespace klee {
                         break;
                     }
                     ref<Expr> v = this->executor->eval(ki, idx, state).value;
+#if !DEBUGINFO
+                    std::cerr << "operand : " << idx << "\n";
+                    v->dump();
+#endif
                     res = isAllocaOrInput(v);
                     if (res == 0) {
                         return res;
@@ -538,11 +535,19 @@ namespace klee {
 
         state.encode.warningL = isInstSame(state.encode.warningWord, temp);
 
-#if DEBUGINFO
+#if !DEBUGINFO
         std::cerr << "isWarning : " << state.encode.warningL << "\n";
-        std::cerr << state.encode.warning << std::endl;
-        std::cerr << s << std::endl;
+//        std::cerr << state.encode.warning << std::endl;
+//        for (const auto& c: state.encode.warningWord) {
+//                std::cerr << c << std::endl;
+//        }
+//        std::cerr << s << std::endl;
+//        for (const auto& c: temp) {
+//            std::cerr << c << std::endl;
+//        }
+
         std::cerr << inst->getParent()->getName().str() << std::endl;
+
 #endif
 
     }

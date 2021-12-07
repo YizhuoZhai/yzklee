@@ -76,6 +76,9 @@ namespace klee {
         for (auto i : e.isWhiteList) {
             this->isWhiteList.push_back(i);
         }
+        for (auto i : e.warningWord) {
+            this->warningWord.push_back(i);
+        }
     }
 
     Encode::~Encode() {
