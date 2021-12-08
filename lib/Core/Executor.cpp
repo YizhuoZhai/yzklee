@@ -1618,6 +1618,7 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
   Instruction *i = ki->inst;
 
   #if !DEBUGINFO
+    llvm::errs() << "inst: ";
     i->print(llvm::errs());
     llvm::errs() << "\n";
   #endif

@@ -444,6 +444,116 @@ namespace klee {
             if (res == 0) {
                 return res;
             }
+        } else if (inst->getOpcode() == Instruction::Call) {
+            uint64_t num = inst->getNumOperands();
+#if DEBUGINFO
+            std::cerr << "inst->getOpcode() : " << inst->getOpcode() << "\n";
+            std::cerr << "num : " << num << "\n";
+#endif
+            for (uint64_t idx = 0; idx < num-1; idx++) {
+                if (inst->getOperand(idx)->getType()->getTypeID() == Type::IntegerTyID) {
+                    int vnumber = ki->operands[idx+1];
+                    if (vnumber == -1) {
+                        break;
+                    }
+                    ref<Expr> v = this->executor->eval(ki, idx+1, state).value;
+#if !DEBUGINFO
+                    std::cerr << "operand : " << idx << "\n";
+                    v->dump();
+#endif
+                    res = isAllocaOrInput(v);
+                    if (res == 0) {
+                        return res;
+                    }
+                } else if (inst->getOperand(idx)->getType()->getTypeID() == Type::PointerTyID) {
+                    int vnumber = ki->operands[idx+1];
+                    if (vnumber == -1) {
+                        break;
+                    }
+
+                    ref<Expr> address = this->executor->eval(ki, idx+1, state).value;
+#if !DEBUGINFO
+                    std::cerr << "call PointerTyID address : " << idx << " : ";
+                    address->dump();
+                    std::cerr << "ki->inst->getOperand(idx) : " << idx << "\n";
+                    ki->inst->getOperand(idx)->print(llvm::errs());;
+#endif
+                    res = isAllocaOrInput(address);
+                    if (res == 0) {
+                        return res;
+                    }
+
+#if !DEBUGINFO
+
+                    auto temp = inst->getOperand(idx)->getType()->getPointerElementType();
+                    std::cerr << "call PointerTyID type : " << temp->getTypeID() << "\n";
+                    if (temp->isStructTy()) {
+                        std::cerr << "call PointerTyID getStructName : " << temp->getStructName().str() << "\n";
+                    }
+
+#endif
+
+                    Expr::Width type = executor->getWidthForLLVMType(
+                            inst->getOperand(idx)->getType()->getPointerElementType());
+
+#if !DEBUGINFO
+                    std::cerr << "call PointerTyID Expr::Width type : " << std::to_string(type) << "\n";
+#endif
+
+                    unsigned bytes = Expr::getMinBytesForWidth(type);
+                    address = executor->optimizer.optimizeExpr(address, true);
+                    ObjectPair op;
+                    bool success;
+                    executor->solver->setTimeout(executor->coreSolverTimeout);
+                    if (!state.addressSpace.resolveOne(state, executor->solver, address, op, success)) {
+                        address = executor->toConstant(state, address, "resolveOne failure");
+                        success = state.addressSpace.resolveOne(cast<ConstantExpr>(address), op);
+                    }
+                    executor->solver->setTimeout(time::Span());
+                    if (success) {
+                        const MemoryObject *mo = op.first;
+
+                        ref<Expr> offset = mo->getOffsetExpr(address);
+                        ref<Expr> check = mo->getBoundsCheckOffset(offset, bytes);
+                        check = executor->optimizer.optimizeExpr(check, true);
+
+                        bool inBounds;
+                        executor->solver->setTimeout(executor->coreSolverTimeout);
+                        bool success = executor->solver->mustBeTrue(state, check, inBounds);
+                        executor->solver->setTimeout(time::Span());
+                        if (success && inBounds) {
+                            const ObjectState *nos = state.addressSpace.findObject(mo);
+                            ref<Expr> result = nos->read(offset, type);
+
+#if !DEBUGINFO
+                            std::cerr << "call PointerTyID result : " << idx << "\n";
+                            result->dump();
+#endif
+
+                            res = isAllocaOrInput(result);
+                            if (res == 0) {
+                                return res;
+                            }
+                        }
+                    }
+
+
+                } else {
+                    int vnumber = ki->operands[idx];
+                    if (vnumber == -1) {
+                        break;
+                    }
+                    ref<Expr> v = this->executor->eval(ki, idx, state).value;
+#if !DEBUGINFO
+                    std::cerr << "operand : " << idx << "\n";
+                    v->dump();
+#endif
+                    res = isAllocaOrInput(v);
+                    if (res == 0) {
+                        return res;
+                    }
+                }
+            }
 
         } else {
 
@@ -490,25 +600,29 @@ namespace klee {
 
     int Symbolic::isAllocaOrInput(ref<Expr> v) {
         int res = -1;
-        if (v->getKind() == Expr::Concat) {
-            ConcatExpr *vv = cast<ConcatExpr>(v);
-            ReadExpr *revalue = cast<ReadExpr>(vv->getKid(0));
-            std::string name = revalue->updates.root->name;
-            if (name.find(this->inputName) < name.size() || name.find(this->allocaName) < name.size()
-                || name.find(this->call_ret_name) < name.size()) {
-                res = 0;
-#if !DEBUGINFO
-                std::cerr << "isAllocaOrInput : " << name << " : ";
-                v->dump();
-#endif
-                return res;
-            }
-        } else if (v->getKind() != Expr::Constant) {
+//        if (v->getKind() == Expr::Concat) {
+//            ConcatExpr *vv = cast<ConcatExpr>(v);
+//            ReadExpr *revalue = cast<ReadExpr>(vv->getKid(0));
+//            std::string name = revalue->updates.root->name;
+//            if (name.find(this->allocaName) < name.size()
+////                    || name.find(this->inputName) < name.size()
+////                    || name.find(this->call_ret_name) < name.size()
+//                    ) {
+//                res = 0;
+//#if !DEBUGINFO
+//                std::cerr << "isAllocaOrInput : " << name << " : ";
+//                v->dump();
+//#endif
+//                return res;
+//            }
+//        } else if (v->getKind() != Expr::Constant) {
             std::set<std::string> relatedSymbolicExpr;
             resolveSymbolicExpr(v, relatedSymbolicExpr);
             for (auto name: relatedSymbolicExpr) {
-                if (name.find(this->inputName) < name.size() || name.find(this->allocaName) < name.size()
-                    || name.find(this->call_ret_name) < name.size()) {
+                if (name.find(this->allocaName) < name.size()
+//                    || name.find(this->inputName) < name.size()
+//                    || name.find(this->call_ret_name) < name.size()
+                        ) {
                     res = 0;
 #if !DEBUGINFO
                     std::cerr << "isAllocaOrInput : " << name << " : ";
@@ -517,7 +631,7 @@ namespace klee {
                     return res;
                 }
             }
-        }
+//        }
         return res;
     }
 
