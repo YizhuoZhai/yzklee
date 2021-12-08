@@ -1658,11 +1658,11 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
         return;
     } else if (result == 0) {
         state.encode.output();
-	    errs()<<"Yes.\n";
+	    errs()<<"Yes find.\n";
         exit(0);
         // find
     } else if (result == -2) {
-	    errs()<<"Yes.\n";
+	    errs()<<"Yes alt.\n";
         state.encode.output();
         // alt
     }

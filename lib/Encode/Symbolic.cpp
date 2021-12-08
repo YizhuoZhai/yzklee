@@ -294,7 +294,7 @@ namespace klee {
                 ss << rso.str().at(i);
             }
 
-            std::string GlobalName = ss.str() + "call return";
+            std::string GlobalName = ss.str() + call_ret_name + std::to_string(call_ret_count++);
             ref<Expr> symbolic = manualMakeSymbolic(GlobalName, size);
             executor->bindLocal(ki, state, symbolic);
 #if DEBUGINFO
@@ -329,7 +329,10 @@ namespace klee {
             bit_size = size * 8;
         } else if (ai->getAllocatedType()->getTypeID() == Type::PointerTyID) {
             bit_size = BIT_WIDTH;
+        } else if (ai->getAllocatedType()->getTypeID() == Type::StructTyID) {
+            bit_size = size * 8;
         } else {
+            std::cerr << "ai->getAllocatedType()->getTypeID() : " << ai->getAllocatedType()->getTypeID() << "\n";
 #if DEBUGINFO
             std::cerr << "Alloca state.encode.ckeck = false;" << "\n";
 #endif
@@ -491,16 +494,26 @@ namespace klee {
             ConcatExpr *vv = cast<ConcatExpr>(v);
             ReadExpr *revalue = cast<ReadExpr>(vv->getKid(0));
             std::string name = revalue->updates.root->name;
-            if (name.find(this->inputName) || name.find(this->allocaName)) {
+            if (name.find(this->inputName) < name.size() || name.find(this->allocaName) < name.size()
+                || name.find(this->call_ret_name) < name.size()) {
                 res = 0;
+#if !DEBUGINFO
+                std::cerr << "isAllocaOrInput : " << name << " : ";
+                v->dump();
+#endif
                 return res;
             }
         } else if (v->getKind() != Expr::Constant) {
             std::set<std::string> relatedSymbolicExpr;
             resolveSymbolicExpr(v, relatedSymbolicExpr);
-            for (auto name : relatedSymbolicExpr) {
-                if (name.find(this->inputName) || name.find(this->allocaName)) {
+            for (auto name: relatedSymbolicExpr) {
+                if (name.find(this->inputName) < name.size() || name.find(this->allocaName) < name.size()
+                    || name.find(this->call_ret_name) < name.size()) {
                     res = 0;
+#if !DEBUGINFO
+                    std::cerr << "isAllocaOrInput : " << name << " : ";
+                    v->dump();
+#endif
                     return res;
                 }
             }
@@ -515,7 +528,7 @@ namespace klee {
         std::stringstream ss;
         unsigned int j = rso.str().find('!');
         if (j >= rso.str().size()) {
-            for (char i : rso.str()) {
+            for (char i: rso.str()) {
                 ss << i;
             }
         } else {
@@ -560,7 +573,7 @@ namespace klee {
             bool res = true;
             for (uint64_t i = 0; i < inst1.size(); i++) {
                 std::string w = inst1[i];
-		std::cerr <<"inst1["<<i<<"] ="<<w<<", inst2 = "<<inst2[i]<<"\n";
+                std::cerr << "inst1[" << i << "] =" << w << ", inst2 = " << inst2[i] << "\n";
                 if (w.length() > 1) {
                     if (w[0] == '%' && w[1] >= '0' && w[1] <= '9') {
                         continue;

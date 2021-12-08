@@ -52,6 +52,8 @@ public:
     uint64_t inputCount = 0;
     std::string allocaName = "alloca";
     uint64_t allocaCount = 0;
+	std::string call_ret_name = "call return";
+	uint64_t call_ret_count = 0;
 
 private:
 	ref<Expr> manualMakeSymbolic(std::string name, unsigned size);
