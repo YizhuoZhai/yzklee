@@ -331,9 +331,12 @@ namespace klee {
             bit_size = BIT_WIDTH;
         } else if (ai->getAllocatedType()->getTypeID() == Type::StructTyID) {
             bit_size = size * 8;
+        } else if (ai->getAllocatedType()->getTypeID() == Type::ArrayTyID) {
+            bit_size = size * 8;
         } else {
-            std::cerr << "ai->getAllocatedType()->getTypeID() : " << ai->getAllocatedType()->getTypeID() << "\n";
 #if DEBUGINFO
+            std::cerr << "ai->getAllocatedType()->getTypeID() : " << ai->getAllocatedType()->getTypeID() << "\n";
+            std::cerr << "Symbolic::Alloca size : " << std::to_string(size) << "\n";
             std::cerr << "Alloca state.encode.ckeck = false;" << "\n";
 #endif
 //            state.encode.ckeck = false;

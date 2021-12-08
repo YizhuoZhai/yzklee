@@ -2402,6 +2402,10 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
     unsigned elementSize = 
       kmodule->targetData->getTypeStoreSize(ai->getAllocatedType());
     ref<Expr> size = Expr::createPointer(elementSize);
+#if !DEBUGINFO
+      std::cerr << "Instruction::Alloca size : ";
+      size->dump();
+#endif
     if (ai->isArrayAllocation()) {
       ref<Expr> count = eval(ki, 0, state).value;
       count = Expr::createZExtToPointerWidth(count);
