@@ -348,6 +348,7 @@ namespace klee {
         this->allocaCount++;
 
         ref<Expr> symbolic = manualMakeSymbolic(name, bit_size);
+        std::cerr << "Symbolic::Alloca name : " << name << "\n";
         ObjectPair op;
         ref<Expr> address = this->executor->getDestCell(state, ki).value;
         ConstantExpr *realAddress = dyn_cast<ConstantExpr>(address);
