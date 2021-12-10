@@ -472,7 +472,7 @@ namespace klee {
         check_result result = z3_solverr.check();
         if (result == z3::sat) {
             model m = z3_solverr.get_model();
-#if DEBUGINFO
+#if !DEBUGINFO
             std::cerr << "Yes!\n";
             std::cerr << "\nz3_solver.get_model()\n";
             std::cerr << "\n" << m << "\n";
