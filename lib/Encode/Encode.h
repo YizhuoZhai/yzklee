@@ -52,6 +52,7 @@ public:
     bool warningL;
     std::string warning;
     std::vector<std::string> warningWord;
+	std::map<ref<Expr>, ref<Expr>> store_map;
 
 public:
 	void addList();

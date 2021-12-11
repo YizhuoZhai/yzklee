@@ -79,6 +79,9 @@ namespace klee {
         for (auto i : e.warningWord) {
             this->warningWord.push_back(i);
         }
+        for (auto i : e.store_map) {
+            this->store_map[i.first] = i.second;
+        }
     }
 
     Encode::~Encode() {
@@ -464,7 +467,7 @@ namespace klee {
 
     void Encode::checkConditions() {
         for (unsigned int i = 0; i < constraintexpr.size(); i++) {
-#if DEBUGINFO
+#if !DEBUGINFO
             std::cerr << constraintexpr[i] << "\n";
 #endif
             z3_solverr.add(constraintexpr[i]);

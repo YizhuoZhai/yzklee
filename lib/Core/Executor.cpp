@@ -1627,6 +1627,9 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
         int result;
         result = state.encode.checkList(i->getParent());
         if (result == -1) {
+ #if !DEBUGINFO
+    llvm::errs() << "black list end: " << i->getParent()->getName().str() << "\n";
+  #endif
             terminateState(state);
             return;
         }
@@ -1654,6 +1657,9 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
     int result;
     result = state.encode.flag;
     if (result == -1) {
+ #if !DEBUGINFO
+    llvm::errs() << "black list end: " << i->getParent()->getName().str() << "\n";
+  #endif
         terminateState(state);
         // black list
         return;
@@ -1765,32 +1771,32 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
       if (branches.first) {
           std::cerr << "true : \n";
         transferToBasicBlock(bi->getSuccessor(0), bi->getParent(), *branches.first);
-	branches.first->encode.addpath("true : " + rso.str());	
+	      branches.first->encode.addpath("true : " + rso.str());	
       }
       if (branches.second) {
           std::cerr << "false : \n";
         transferToBasicBlock(bi->getSuccessor(1), bi->getParent(), *branches.second);
-	branches.second->encode.addpath("false : " + rso.str());
+	      branches.second->encode.addpath("false : " + rso.str());
       }
       int result;
-                if (cond->getKind() != Expr::Constant) {
-                    if (branches.first) {
-                        result = branches.first->encode.addBrConstraint(cond, true, bi->getSuccessor(0)->getName(),
-                                                                        bi->getSuccessor(1)->getName());
-                        if (result == -2) {
-                            std::cerr << "terminateState true : \n";
-                            terminateState(*branches.first);
-                        }
-                    }
-                    if (branches.second) {
-                        result = branches.second->encode.addBrConstraint(cond, false, bi->getSuccessor(1)->getName(),
-                                                                         bi->getSuccessor(0)->getName());
-                        if (result == -2) {
-                            std::cerr << "terminateState false : \n";
-                            terminateState(*branches.second);
-                        }
-                    }
-                }
+      if (cond->getKind() != Expr::Constant) {
+        if (branches.first) {
+            result = branches.first->encode.addBrConstraint(cond, true, bi->getSuccessor(0)->getName(),
+                                                            bi->getSuccessor(1)->getName());
+            if (result == -2) {
+                std::cerr << "terminateState true : \n";
+                terminateState(*branches.first);
+            }
+        }
+        if (branches.second) {
+            result = branches.second->encode.addBrConstraint(cond, false, bi->getSuccessor(1)->getName(),
+                                                              bi->getSuccessor(0)->getName());
+            if (result == -2) {
+                std::cerr << "terminateState false : \n";
+                terminateState(*branches.second);
+            }
+        }
+      }
     }
     break;
   }
@@ -2903,8 +2909,13 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
     break;
   // Other instructions...
   // Unhandled
-  default:
+  default: {
+    #if !DEBUGINFO
+        llvm::errs() << "illegal instruction\n";
+    #endif
       terminateStateEarly(state, "illegal instruction");
+  }
+      
     break;
   }
 }
@@ -3887,22 +3898,34 @@ if (!os->initialize) {
 
       return;
     } else {
-#if DEBUGINFO
+#if !DEBUGINFO
         std::cerr << "!inBounds\n";
 #endif
         if (isWrite) {
-
+          state.encode.store_map[address] = value;
+#if !DEBUGINFO
+    std::cerr << "add store address : ";
+    address->dump();
+    std::cerr << "add store value : ";
+    value->dump();
+#endif
         } else {
             symbolic.load(state, target);
         }
         return;
     }
   } else {
-#if DEBUGINFO
+#if !DEBUGINFO
     std::cerr << "!success\n";
 #endif
     if (isWrite) {
-
+        state.encode.store_map[address] = value;
+#if !DEBUGINFO
+    std::cerr << "add store address : ";
+    address->dump();
+    std::cerr << "add store value : ";
+    value->dump();
+#endif
      } else {
         symbolic.load(state, target);
      }

@@ -87,7 +87,7 @@ namespace klee {
         ObjectState *os = new ObjectState(size, array);
         ref<Expr> offset = ConstantExpr::create(0, BIT_WIDTH);
         ref<Expr> result = os->read(offset, size);
-#if DEBUGINFO
+#if !DEBUGINFO
         llvm::errs() << "make symboic:" << name << "\n";
         llvm::errs() << "result : ";
         result->dump();
@@ -149,11 +149,27 @@ namespace klee {
     }
 
     void Symbolic::load(ExecutionState &state, KInstruction *ki) {
+        ref<Expr> address = executor->eval(ki, 0, state).value;
+        if (state.encode.store_map.find(address) != state.encode.store_map.end()) {
+            executor->bindLocal(ki, state, state.encode.store_map[address]);
+#if !DEBUGINFO
+    std::cerr << "find load address : ";
+    address->dump();
+    std::cerr << " value : ";
+    state.encode.store_map[address]->dump();
+#endif
+            return;
+        } else {
+#if !DEBUGINFO
+    std::cerr << "not find load address : ";
+    address->dump();
+#endif
+        }
+
+
         std::string GlobalName;
         bool isGlobal;
-
         Type::TypeID id = ki->inst->getType()->getTypeID();
-        ref<Expr> address = executor->eval(ki, 0, state).value;
         ObjectPair op;
 #if DEBUGINFO
         ref<Expr> addressCurrent = executor->eval(ki, 0, state).value;

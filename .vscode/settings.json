@@ -1,0 +1,14 @@
+{
+    "cmake.configureArgs": [
+        "-DLLVM_CONFIG_BINARY=/home/yzhai003/llvm-9.0.0/build/bin/llvm-config", 
+        "-DENABLE_SOLVER_Z3=ON",
+        "-DZ3_INCLUDE_DIRS=/home/yzhai003/z3/build/include",
+        "-DZ3_LIBRARIES=/home/yzhai003/z3/build/lib/libz3.so",
+        "-DENABLE_UNIT_TESTS=OFF",
+        "-DENABLE_SYSTEM_TESTS=OFF",
+        "-DENABLE_TCMALLOC=OFF"
+    ],
+    "files.associations": {
+        "*.def": "cpp"
+    }
+}
